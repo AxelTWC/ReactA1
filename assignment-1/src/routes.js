@@ -13,6 +13,25 @@ const {
   validateQueryParams,
 } = require("./middleware");
 
+// Helper to ensure SQLite DATETIME strings are converted to ISO 8601 Z format
+const toIsoZulu = (dbTimestamp) => {
+  if (!dbTimestamp) return dbTimestamp;
+  // SQLite returns 'YYYY-MM-DD HH:MM:SS' (no timezone). Convert to 'YYYY-MM-DDTHH:MM:SS.000Z'
+  if (typeof dbTimestamp === "string" && dbTimestamp.includes(" ") && !dbTimestamp.includes("T")) {
+    return dbTimestamp.replace(" ", "T") + ".000Z";
+  }
+  return dbTimestamp;
+};
+
+const normalizePaper = (paper) => {
+  if (!paper) return paper;
+  return {
+    ...paper,
+    created_at: toIsoZulu(paper.created_at),
+    updated_at: toIsoZulu(paper.updated_at),
+  };
+};
+
 // ------------------------------------------------------------
 // GET /api/papers
 //
@@ -37,8 +56,8 @@ router.get("/papers", validateQueryParams, async (req, res, next) => {
     // - Call the database function to retrieve papers
     // - Return the result as JSON
     // - Status code: 200
-    const papers = await db.getPapers(filters);
-    res.status(200).json(papers);
+  const papers = await db.getPapers(filters);
+  res.status(200).json(papers.map(normalizePaper));
 
   } catch (error) {
     
@@ -63,11 +82,11 @@ router.get("/papers/:id", validateId, async (req, res, next) => {
     //     { "error": "Paper not found" }
     // - If found, return the paper as JSON
     // - Status code: 200
-    const paper = await db.getPaperById(req.params.id);
+  const paper = await db.getPaperById(req.params.id);
     if (!paper) {
       return res.status(404).json({ error: "Paper not found" });
     }
-    res.status(200).json(paper);
+  res.status(200).json(normalizePaper(paper));
   } catch (error) {
     next(error);
   }
@@ -84,15 +103,15 @@ router.post("/papers", async (req, res, next) => {
     if (errors.length > 0) {
       // TODO:
       // - Return status 400 with validation error information
-      return res.status(400).json({ errors });
+  return res.status(400).json({ error: "Validation Error", messages: errors });
     }
 
     // TODO:
     // - Create a new paper using the database
     // - Return the created paper as JSON
     // - Status code: 201
-    const newPaper = await db.createPaper(req.body);
-    res.status(201).json(newPaper);
+  const newPaper = await db.createPaper(req.body);
+  res.status(201).json(normalizePaper(newPaper));
   } catch (error) {
     next(error);
   }
@@ -112,7 +131,7 @@ router.put("/papers/:id", validateId, async (req, res, next) => {
     if (errors.length > 0) {
       // TODO:
       // - Return status 400 with validation error information
-      return res.status(400).json({ errors });
+  return res.status(400).json({ error: "Validation Error", messages: errors });
     }
 
     // TODO:
@@ -122,11 +141,11 @@ router.put("/papers/:id", validateId, async (req, res, next) => {
     //     { "error": "Paper not found" }
     // - If updated, return the updated paper as JSON
     // - Status code: 200
-    const updatedPaper = await db.updatePaper(req.params.id, req.body);
+  const updatedPaper = await db.updatePaper(req.params.id, req.body);
     if (!updatedPaper) {
       return res.status(404).json({ error: "Paper not found" });
     }
-    res.status(200).json(updatedPaper);
+  res.status(200).json(normalizePaper(updatedPaper));
   } catch (error) {
     next(error);
   }
