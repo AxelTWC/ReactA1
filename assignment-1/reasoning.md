@@ -5,6 +5,8 @@ Before coding , I think the hardest part is to get started from the template as 
 ## Q2: Did you use AI?
 
 Yes: Files affected with AI - route.js
+ - Major use : Debugging assistance
+ Listed usage below Q3.
 
 ## Q3: (Only if you used AI) Choose one AI-generated output and explain what you changed and why.
 
